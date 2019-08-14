@@ -69,9 +69,9 @@ cantidadDeHabitantes(corrientes,992595).
 cantidadDeHabitantes(misiones,1189446).
 
 % En este punto no hace falta implementar testeo unitario, se pide que identifique
-% dónde aparece el Principio de Universo Cerrado y justifique su decisión.
+% donde aparece el Principio de Universo Cerrado y justifique su decision.
 % Aparece el principio del Universo Cerrado en "Peter no es candidato del partido Amarillo",
-% "El partido violeta no tiene candidatos" y "Finalmente no se presentará en Formosa"
+% "El partido violeta no tiene candidatos" y "Finalmente no se presentara en Formosa"
 % Que decido NO definirlos como hechos, porque todo lo que no este definido en mi base de 
 % conocimiento se da como negado, por el principio del Universo Cerrado.
 
@@ -173,7 +173,7 @@ mayorPorcentaje(Partido1,Partido2,Provincia):-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                       PUNTO 4
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %Se pide resolver partidoHegemonico/1. Un partido es hegemónico si es favorito en las provincias consideradas 
 %importantes, que son Buenos Aires, Córdoba y Santa Fe. 
@@ -181,22 +181,79 @@ mayorPorcentaje(Partido1,Partido2,Provincia):-
 %Un partido es favorito en una provincia si todos los demás 
 %partidos tienen menos o igual intención de voto que el partido ganador.
 
-partidoHegemonico(Partido):- partido(Partido), forall(esFavorito(Partido,Provincia),provinciaImportante(Provincia)).
+provinciaImportante(buenosAires). 
+provinciaImportante(cordoba).
+provinciaImportante(santaFe).
+
+partidoHegemonico(Partido):- partido(Partido), forall(provinciaImportante(Provincia),esFavorito(Partido,Provincia)).
 
 esFavorito(Partido,Provincia) :-
     partido(Partido),
-    voto(Voto1), 
-    forall((intencionDeVotoEn(Provincia,Partido,Voto1),
-    intencionDeVotoEn(Provincia,_,Voto2)),Voto2=<Voto1).
-% intencionDeVotoEn(Provincia, Partido, Porcentaje)
+    intencionDeVotoEn(Provincia,Partido,Voto1),
+    forall((intencionDeVotoEn(Provincia,_,Voto2)),(Voto2=<Voto1)).
 
-partido(Partido):- postula(Partido,_).
+partido(Partido):- intencionDeVotoEn(_,Partido,_).
 
-voto(Voto) :- intencionDeVotoEn(_,_,Voto).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                       PUNTO 5
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-provinciaImportante(buenosAires). % amarillo
-provinciaImportante(cordoba).
-provinciaImportante(santaFe).   %azul
+/*Durante la campaña los candidatos hacen tres tipos de promesa:
+1 que la inflación se mantenga en un determinado porcentaje anual
+2 construir una lista de cosas
+3 o aumentar una cantidad de puestos de trabajo
+*/
+
+promete(garrett, construir([escuela, hospital, universidad, ruta])).
+promete(garrett, metaDeInflacion(18)).
+promete(garrett, construir([casas, autopistas])).
+promete(seth, metaDeInflacion(10)).
+promete(claire, nuevosPuestosDeTrabajo(200000)).
+promete(claire, nuevosPuestosDeTrabajo(520000)).
+promete(claire, nuevosPuestosDeTrabajo(1000000)).
+promete(claire, metaDeInflacion(4)).
+promete(claire, metaDeInflacion(14)).
+promete(frank, metaDeInflacion(3)).
+promete(frank, metaDeInflacion(13)).
+promete(frank, nuevosPuestosDeTrabajo(10000)).
+promete(frank, construir([hospital, universidad])).
+promete(frank, construir([plazas, autopistas, extensionSubte, repavimentacionTotal])).
+
+serio(Persona):-
+  promete(Persona,_), 
+  findall(Promesa,esRealizable(Persona,Promesa),Promesas),length(Promesas,Cantidad),Cantidad>=3.
+
+esRealizable(Persona,Promesa):- promete(Persona,Promesa), seHace(Persona,Promesa).
+
+seHace(_,metaDeInflacion(Cantidad)):- Cantidad > 10.
+
+seHace(_,construir(Lista)):- length(Lista,Cantidad),Cantidad<3,not(member(universidad,Lista)).
+
+seHace(Persona,nuevosPuestosDeTrabajo(Puestos)):- edad(Persona,Edad), Puestos =< Edad * 10000. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                       PUNTO 6
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 1)es amigo de otro candidato de otro partido
+% 2) o bien es amigo de otro candidato del mismo partido, que es panquequeable
+
+panquequeable(Candidato):-
+     amigo(Candidato,CandidatoAmigo),partidosDistintos(Candidato,CandidatoAmigo).
+panquequeable(Candidato):-
+     amigo(Candidato,OtroAmigo), not(partidosDistintos(Candidato,OtroAmigo)),panquequeable(OtroAmigo).  
+
+partidosDistintos(Candidato,CandidatoAmigo):-
+     candidato(Candidato,Partido), candidato(CandidatoAmigo,Partido2), Partido\= Partido2.
+
+
+% el primero es amigo del segundo pero no al revés
+amigo(frank, claire).
+amigo(claire, catherine).
+amigo(catherine, jackie).
+amigo(jackie, garrett).
+amigo(jackie, heather).
+amigo(seth, heather).
+
 
 
 % *********************************************************************
@@ -220,9 +277,49 @@ test(provincia_no_picante_por_un_partido_solo,fail):-
 
 :-begin_tests(ganadores).
 test(candidato1_le_gana_a_candidato2_en_provincia,nondet):- leGanaA(frank, garrett, tierraDelFuego).
-test(frank_le_gana_a_jackie_en_santaFe,nondet):- leGanaA(frank, jackie, santaFe).
-test(clarie_no_le_gana_a_jackie_en_misiones,fail):- leGanaA(claire, jackie, misiones).
-test(frank_le_gana_a_claire_en_tierraDelFuego,nondet):- leGanaA(frank, claire, tierraDelFuego).
-test(heather_no_le_gana_a_linda_en_buenosAires,fail):-leGanaA(heather, linda, buenosAires).
+test(unico_candidato1_postulado_en_una_provincia,nondet):- leGanaA(frank, jackie, santaFe).
+test(candidato_no_le_gana_a_candidato2_porque_no_se_presenta_en_provincia,fail):- leGanaA(claire, jackie, misiones).
+test(ambos_del_mismo_partido_compiten_en_misma_provincia,nondet):- leGanaA(frank, claire, tierraDelFuego).
+test(ambos_candidatos_empatan_en_votos,fail):-leGanaA(heather, linda, buenosAires).
 
 :-end_tests(ganadores).
+
+% *********************************************************************
+% TEST     PUNTO_4) 
+% *********************************************************************
+
+%Implemente los casos de prueba, ¿cuáles son los casos de equivalencia que surgen?
+%Surgen dos clases, porque agrupo los que cumplen la condicion favorito, que lo hace hegemonico, y los que fallan.
+% ¿Cómo podemos testear los que no son partidos hegemónicos, qué conceptos aparecen?
+%Los testeamos con Fail que nos permite ver si una consulta es falsa, agrupando todos los que fallan.
+:-begin_tests(hegemonico).
+test(hegemonico_partidoFavorito_en_provinciasImportantes,nondet):- partidoHegemonico(azul).
+test(no_hegemonico_si_tienen_mas_votos_los_demas_partidos,fail) :- partidoHegemonico(rojo). 
+:-end_tests(hegemonico).
+
+
+% *********************************************************************
+% TEST     PUNTO_5) 
+% *********************************************************************
+:-begin_tests(promesas).
+
+test(no_serio_se_cumplen_2,fail):- serio(garret).
+test(no_serio_solo_cumple_una,fail):- serio(seth).
+test(es_serio_cumple_3,nondet):- serio(claire).
+
+:-end_tests(promesas).
+% *********************************************************************
+% TEST     PUNTO_6) 
+% *********************************************************************
+
+:-begin_tests(panquequeables).
+
+test(amigos_panquequeables,set(Quienes=[catherine,frank,jackie,claire])):- panquequeable(Quienes).
+test(amigos_de_dos_partidos_distintos,nondet):- panquequeable(catherine).
+test(amigo1_amigo2_del_mismo_partido_pero_amigo2_es_panquequeable_conOtroAmigo_partido_distinto,nondet):- panquequeable(frank).
+test(no_panquequeables,fail):- panquequeable(seth).
+
+
+%no tiene sentido escribir otro test cuando ambos forman parte de la misma clase de equivalencia
+
+:-end_tests(panquequeables).
